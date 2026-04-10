@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export function useConsultations() {
   const [consultations, setConsultations] = useState([]);
@@ -10,9 +10,9 @@ export function useConsultations() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/consultations`);
-      const data = await res.json();
-      setConsultations(Array.isArray(data) ? data : []);
+      const q = query(collection(db, 'consultations'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setConsultations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
       setConsultations([]);
@@ -23,32 +23,21 @@ export function useConsultations() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const create = async (formData) => {
-    const res = await fetch(`${API}/consultations`, {
-      method: 'POST',
-      body: formData, // multipart for image uploads
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create');
-    setConsultations((prev) => [data, ...prev]);
-    return data;
+  const create = async (body) => {
+    const ref = await addDoc(collection(db, 'consultations'), { ...body, createdAt: serverTimestamp() });
+    const newDoc = { id: ref.id, ...body };
+    setConsultations(prev => [newDoc, ...prev]);
+    return newDoc;
   };
 
-  const update = async (id, formData) => {
-    const res = await fetch(`${API}/consultations/${id}`, {
-      method: 'PUT',
-      body: formData,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update');
-    setConsultations((prev) => prev.map((c) => (c._id === id ? data : c)));
-    return data;
+  const update = async (id, body) => {
+    await updateDoc(doc(db, 'consultations', id), body);
+    setConsultations(prev => prev.map(c => c.id === id ? { ...c, ...body } : c));
   };
 
   const remove = async (id) => {
-    const res = await fetch(`${API}/consultations/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    setConsultations((prev) => prev.filter((c) => c._id !== id));
+    await deleteDoc(doc(db, 'consultations', id));
+    setConsultations(prev => prev.filter(c => c.id !== id));
   };
 
   return { consultations, loading, error, create, update, remove, refetch: fetchAll };

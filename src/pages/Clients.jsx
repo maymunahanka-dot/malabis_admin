@@ -157,7 +157,7 @@ export default function Clients() {
   const handleEdit = async (form) => {
     setSaving(true);
     try {
-      await update(editing._id, form);
+      await update(editing.id, form);
       setEditing(null);
       setPanelOpen(false);
       toast('Client updated');
@@ -180,7 +180,7 @@ export default function Clients() {
   const toggleStatus = async (c) => {
     const newStatus = c.status === 'Active' ? 'Inactive' : 'Active';
     try {
-      await update(c._id, { ...c, status: newStatus });
+      await update(c.id, { ...c, status: newStatus });
       toast(`Set to ${newStatus}`, 'info');
     } catch (err) {
       toast(err.message, 'error');
@@ -256,7 +256,7 @@ export default function Clients() {
                 <td className="px-4 py-4">
                   <ActionMenu
                     onEdit={() => { setEditing(c); setPanelOpen(true); }}
-                    onDelete={() => handleDelete(c._id)}
+                    onDelete={() => handleDelete(c.id)}
                     onToggleStatus={() => toggleStatus(c)}
                     status={c.status}
                   />

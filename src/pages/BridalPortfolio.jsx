@@ -51,20 +51,22 @@ export default function BridalPortfolio() {
     if (!form.brideName.trim()) return;
     setSaving(true);
     try {
-      const fd = new FormData();
-      fd.append('category',         form.category);
-      fd.append('brideName',        form.brideName);
-      fd.append('weddingLocation',  form.weddingLocation);
-      fd.append('fabricType',       form.fabricType);
-      fd.append('dressDescription', form.dressDescription);
-      fd.append('hoverText',        form.hoverText);
-      if (form.imageFile) fd.append('image', form.imageFile);
+      const payload = {
+        category:         form.category,
+        brideName:        form.brideName,
+        weddingLocation:  form.weddingLocation,
+        fabricType:       form.fabricType,
+        dressDescription: form.dressDescription,
+        hoverText:        form.hoverText,
+        imageFile:        form.imageFile,
+        imagePreview:     form.imagePreview,
+      };
 
       if (editingItem) {
-        await update(editingItem._id, fd);
+        await update(editingItem.id, payload);
         toast('Portfolio item updated');
       } else {
-        await create(fd);
+        await create(payload);
         toast('Portfolio item added');
       }
       closePanel();
@@ -121,7 +123,7 @@ export default function BridalPortfolio() {
       ) : (
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
           {filtered.map(item => (
-            <BridalCard key={item._id} item={item} onEdit={openEdit} onDelete={handleDelete} />
+            <BridalCard key={item.id} item={item} onEdit={openEdit} onDelete={handleDelete} />
           ))}
         </div>
       )}
@@ -181,7 +183,7 @@ function BridalCard({ item, onEdit, onDelete }) {
           <button onClick={() => onEdit(item)} className="bg-white/90 hover:bg-white text-[#B8860B] p-1.5 rounded-md shadow">
             <Pencil size={14} />
           </button>
-          <button onClick={() => onDelete(item._id)} className="bg-white/90 hover:bg-white text-red-500 p-1.5 rounded-md shadow">
+          <button onClick={() => onDelete(item.id)} className="bg-white/90 hover:bg-white text-red-500 p-1.5 rounded-md shadow">
             <Trash2 size={14} />
           </button>
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { uploadToCloudinary } from '../lib/uploadToCloudinary';
 
 export function usePortfolio() {
   const [portfolio, setPortfolio] = useState([]);
@@ -10,9 +11,9 @@ export function usePortfolio() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/portfolio`);
-      const data = await res.json();
-      setPortfolio(Array.isArray(data) ? data : []);
+      const q = query(collection(db, 'portfolio'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setPortfolio(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -22,26 +23,28 @@ export function usePortfolio() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const create = async (formData) => {
-    const res = await fetch(`${API}/portfolio`, { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create');
-    setPortfolio((prev) => [data, ...prev]);
-    return data;
+  const create = async ({ imageFile, category, brideName, weddingLocation, fabricType, dressDescription, hoverText }) => {
+    if (!imageFile) throw new Error('Image is required');
+    const imageUrl = await uploadToCloudinary(imageFile);
+    const data = { category, brideName, weddingLocation, fabricType, dressDescription, hoverText, image: imageUrl };
+    const ref = await addDoc(collection(db, 'portfolio'), { ...data, createdAt: serverTimestamp() });
+    const newDoc = { id: ref.id, ...data };
+    setPortfolio(prev => [newDoc, ...prev]);
+    return newDoc;
   };
 
-  const update = async (id, formData) => {
-    const res = await fetch(`${API}/portfolio/${id}`, { method: 'PUT', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update');
-    setPortfolio((prev) => prev.map((p) => (p._id === id ? data : p)));
+  const update = async (id, { imageFile, imagePreview, ...rest }) => {
+    let image = imagePreview; // keep existing URL if no new file
+    if (imageFile) image = await uploadToCloudinary(imageFile);
+    const data = { ...rest, image };
+    await updateDoc(doc(db, 'portfolio', id), data);
+    setPortfolio(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
     return data;
   };
 
   const remove = async (id) => {
-    const res = await fetch(`${API}/portfolio/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    setPortfolio((prev) => prev.filter((p) => p._id !== id));
+    await deleteDoc(doc(db, 'portfolio', id));
+    setPortfolio(prev => prev.filter(p => p.id !== id));
   };
 
   return { portfolio, loading, error, create, update, remove };

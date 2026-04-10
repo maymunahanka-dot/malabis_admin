@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export function useMessages() {
   const [messages, setMessages] = useState([]);
@@ -10,9 +10,9 @@ export function useMessages() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/messages`);
-      const data = await res.json();
-      setMessages(Array.isArray(data) ? data : []);
+      const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -23,33 +23,20 @@ export function useMessages() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const create = async (body) => {
-    const res = await fetch(`${API}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create');
-    setMessages((prev) => [data, ...prev]);
-    return data;
+    const ref = await addDoc(collection(db, 'messages'), { ...body, createdAt: serverTimestamp() });
+    const newDoc = { id: ref.id, ...body };
+    setMessages(prev => [newDoc, ...prev]);
+    return newDoc;
   };
 
   const update = async (id, body) => {
-    const res = await fetch(`${API}/messages/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update');
-    setMessages((prev) => prev.map((m) => (m._id === id ? data : m)));
-    return data;
+    await updateDoc(doc(db, 'messages', id), body);
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, ...body } : m));
   };
 
   const remove = async (id) => {
-    const res = await fetch(`${API}/messages/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    setMessages((prev) => prev.filter((m) => m._id !== id));
+    await deleteDoc(doc(db, 'messages', id));
+    setMessages(prev => prev.filter(m => m.id !== id));
   };
 
   return { messages, loading, error, create, update, remove };

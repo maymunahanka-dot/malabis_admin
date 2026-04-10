@@ -106,7 +106,7 @@ export default function Messages() {
 
   const handleDelete = async () => {
     try {
-      await remove(selected._id);
+      await remove(selected.id);
       setDetailOpen(false);
       setSelected(null);
       toast('Message deleted', 'info');
@@ -118,7 +118,7 @@ export default function Messages() {
   const handleEditSave = async (form) => {
     setSaving(true);
     try {
-      const updated = await update(selected._id, form);
+      const updated = await update(selected.id, form);
       setSelected(updated);
       setEditOpen(false);
       toast('Message updated');
@@ -189,7 +189,7 @@ export default function Messages() {
             {filtered.length === 0 ? (
               <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-[#A09080]">No messages found.</td></tr>
             ) : filtered.map((msg, i) => (
-              <tr key={msg._id} onClick={() => openDetail(msg)}
+              <tr key={msg.id} onClick={() => openDetail(msg)}
                 className="border-b border-[#F0EBE3] last:border-0 hover:bg-[#FAF8F5] transition-colors cursor-pointer">
                 <td className="px-5 py-3 text-[#8B7355]">{i + 1}</td>
                 <td className="px-5 py-3 font-medium text-[#111827]">{msg.name}</td>
@@ -202,7 +202,7 @@ export default function Messages() {
                   <ActionMenu
                     onEdit={() => { setSelected(msg); setEditForm({ ...msg }); setEditOpen(true); }}
                     onDelete={async () => {
-                      try { await remove(msg._id); toast('Message deleted', 'info'); }
+                      try { await remove(msg.id); toast('Message deleted', 'info'); }
                       catch (err) { toast(err.message, 'error'); }
                     }}
                   />

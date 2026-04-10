@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export function useClients() {
   const [clients, setClients] = useState([]);
@@ -10,9 +10,9 @@ export function useClients() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/clients`);
-      const data = await res.json();
-      setClients(Array.isArray(data) ? data : []);
+      const q = query(collection(db, 'clients'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setClients(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -23,33 +23,20 @@ export function useClients() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const create = async (body) => {
-    const res = await fetch(`${API}/clients`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create');
-    setClients((prev) => [data, ...prev]);
-    return data;
+    const ref = await addDoc(collection(db, 'clients'), { ...body, createdAt: serverTimestamp() });
+    const newDoc = { id: ref.id, ...body };
+    setClients(prev => [newDoc, ...prev]);
+    return newDoc;
   };
 
   const update = async (id, body) => {
-    const res = await fetch(`${API}/clients/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update');
-    setClients((prev) => prev.map((c) => (c._id === id ? data : c)));
-    return data;
+    await updateDoc(doc(db, 'clients', id), body);
+    setClients(prev => prev.map(c => c.id === id ? { ...c, ...body } : c));
   };
 
   const remove = async (id) => {
-    const res = await fetch(`${API}/clients/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    setClients((prev) => prev.filter((c) => c._id !== id));
+    await deleteDoc(doc(db, 'clients', id));
+    setClients(prev => prev.filter(c => c.id !== id));
   };
 
   return { clients, loading, error, create, update, remove };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 
 export function useBlockDays() {
   const [blockDays, setBlockDays] = useState([]);
@@ -10,9 +10,9 @@ export function useBlockDays() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/block-days`);
-      const data = await res.json();
-      setBlockDays(Array.isArray(data) ? data : []);
+      const q = query(collection(db, 'blockdays'), orderBy('date', 'asc'));
+      const snap = await getDocs(q);
+      setBlockDays(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -23,21 +23,15 @@ export function useBlockDays() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const block = async (date) => {
-    const res = await fetch(`${API}/block-days`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to block day');
-    setBlockDays((prev) => [...prev, data]);
-    return data;
+    const ref = await addDoc(collection(db, 'blockdays'), { date });
+    const newDoc = { id: ref.id, date };
+    setBlockDays(prev => [...prev, newDoc]);
+    return newDoc;
   };
 
   const unblock = async (id) => {
-    const res = await fetch(`${API}/block-days/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to unblock day');
-    setBlockDays((prev) => prev.filter((d) => d._id !== id));
+    await deleteDoc(doc(db, 'blockdays', id));
+    setBlockDays(prev => prev.filter(d => d.id !== id));
   };
 
   return { blockDays, loading, error, block, unblock };

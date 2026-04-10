@@ -92,7 +92,7 @@ export default function Subscriptions() {
   const handleEdit = async (form) => {
     setSaving(true);
     try {
-      await update(editing._id, form);
+      await update(editing.id, form);
       setEditing(null);
       setPanelOpen(false);
       toast('Subscriber updated');
@@ -163,7 +163,7 @@ export default function Subscriptions() {
             {filtered.length === 0 ? (
               <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-[#A09080]">No subscribers found.</td></tr>
             ) : filtered.map((s, i) => (
-              <tr key={s._id} className="border-b border-[#F0EBE3] last:border-0 hover:bg-[#FAF8F5] transition-colors">
+              <tr key={s.id} className="border-b border-[#F0EBE3] last:border-0 hover:bg-[#FAF8F5] transition-colors">
                 <td className="px-5 py-3 text-[#8B7355]">{i + 1}</td>
                 <td className="px-5 py-3 font-medium text-[#111827]">{s.name}</td>
                 <td className="px-5 py-3 text-[#4b5563]">{s.email}</td>
@@ -173,7 +173,7 @@ export default function Subscriptions() {
                 <td className="px-4 py-3">
                   <ActionMenu
                     onEdit={() => { setEditing(s); setPanelOpen(true); }}
-                    onDelete={() => handleDelete(s._id)}
+                    onDelete={() => handleDelete(s.id)}
                   />
                 </td>
               </tr>

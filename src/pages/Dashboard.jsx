@@ -5,6 +5,7 @@ import ReservationDetailPanel from '../components/ReservationDetailPanel';
 import { useConsultations } from '../hooks/useConsultations';
 import { useToast } from '../context/ToastContext';
 import Spinner from '../components/Spinner';
+import { uploadMultiple } from '../lib/uploadToCloudinary';
 
 const tabs = [
   'All',
@@ -34,7 +35,7 @@ const Dashboard = () => {
   const stats = [
     { label: 'Total Bookings', sublabel: 'This week', value: consultations.length, icon: BookMarked },
     { label: 'Pending Approvals', sublabel: 'This week', value: consultations.filter(r => r.paymentStatus === 'Pending').length, icon: Clock3 },
-    { label: "Today's Appointment", sublabel: 'Today', value: consultations.filter(r => r.date?.split('T')[0] === new Date().toISOString().split('T')[0]).length, icon: CalendarCheck2 },
+    { label: "Today's Appointment", sublabel: 'Today', value: consultations.filter(r => r.date === new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })).length, icon: CalendarCheck2 },
     { label: 'Total Revenue', sublabel: 'All time', value: `₦${consultations.filter(r => r.paymentStatus === 'Paid').reduce((sum, r) => sum + (r.consultationFee || 0), 0).toLocaleString()}`, icon: TrendingUp },
   ];
 
@@ -78,7 +79,36 @@ const Dashboard = () => {
   const handleSubmit = async (data) => {
     setSaving(true);
     try {
-      await create(buildFormData(data));
+      let inspirationImages = [];
+      if (Array.isArray(data.images) && data.images.some(f => f instanceof File)) {
+        const files = data.images.filter(f => f instanceof File);
+        inspirationImages = await uploadMultiple(files);
+      }
+      await create({
+        fullName:        data.name || '',
+        email:           data.email || '',
+        phoneNumber:     data.phone || '',
+        nextOfKin:       data.nextOfKin || '',
+        nextOfKinPhone:  data.nextOfKinPhone || '',
+        appointmentType: data.appointmentType || '',
+        appointmentWith: data.appointmentWith || '',
+        location:        data.appointmentLocation || '',
+        date:            data.appointmentDate || '',
+        time:            data.appointmentTime || '',
+        consultationFee: data.consultationFee || '',
+        paymentStatus:   data.paymentStatus || 'Pending',
+        paymentGateway:  data.paymentGateway || '',
+        fabricPreference:     data.fabricPreference || '',
+        trainLength:          data.trainLength || '',
+        sleevePreference:     data.sleevePreference || '',
+        silhouettePreference: data.silhouettePreference || '',
+        weddingDate:     data.weddingDate || '',
+        budget:          data.budget || '',
+        weddingLocation: data.weddingLocation || '',
+        ceremonyType:    data.ceremonyType || '',
+        additionalInfo:  data.additionalInfo || '',
+        inspirationImages,
+      });
       setPanelOpen(false);
       toast('Reservation added successfully');
     } catch (err) {
@@ -91,7 +121,39 @@ const Dashboard = () => {
   const handleEdit = async (data) => {
     setSaving(true);
     try {
-      await update(selected._id, buildFormData(data));
+      let inspirationImages = Array.isArray(data.images)
+        ? data.images.filter(f => typeof f === 'string') // keep existing URLs
+        : [];
+      const newFiles = Array.isArray(data.images) ? data.images.filter(f => f instanceof File) : [];
+      if (newFiles.length > 0) {
+        const uploaded = await uploadMultiple(newFiles);
+        inspirationImages = [...inspirationImages, ...uploaded];
+      }
+      await update(selected.id, {
+        fullName:        data.name || '',
+        email:           data.email || '',
+        phoneNumber:     data.phone || '',
+        nextOfKin:       data.nextOfKin || '',
+        nextOfKinPhone:  data.nextOfKinPhone || '',
+        appointmentType: data.appointmentType || '',
+        appointmentWith: data.appointmentWith || '',
+        location:        data.appointmentLocation || '',
+        date:            data.appointmentDate || '',
+        time:            data.appointmentTime || '',
+        consultationFee: data.consultationFee || '',
+        paymentStatus:   data.paymentStatus || 'Pending',
+        paymentGateway:  data.paymentGateway || '',
+        fabricPreference:     data.fabricPreference || '',
+        trainLength:          data.trainLength || '',
+        sleevePreference:     data.sleevePreference || '',
+        silhouettePreference: data.silhouettePreference || '',
+        weddingDate:     data.weddingDate || '',
+        budget:          data.budget || '',
+        weddingLocation: data.weddingLocation || '',
+        ceremonyType:    data.ceremonyType || '',
+        additionalInfo:  data.additionalInfo || '',
+        inspirationImages,
+      });
       setEditOpen(false);
       setSelected(null);
       toast('Reservation updated');
@@ -105,7 +167,7 @@ const Dashboard = () => {
   const handleDelete = async () => {
     setSaving(true);
     try {
-      await remove(selected._id);
+      await remove(selected.id);
       setDetailOpen(false);
       setSelected(null);
       toast('Reservation deleted', 'info');
@@ -119,12 +181,12 @@ const Dashboard = () => {
   // normalize MongoDB field names → panel field names
   const normalize = (r) => ({
     ...r,
-    name:              r.fullName,
-    phone:             r.phoneNumber,
-    appointmentDate:   r.date?.split('T')[0],
-    appointmentTime:   r.time,
+    name:                r.fullName,
+    phone:               r.phoneNumber,
+    appointmentDate:     r.date,
+    appointmentTime:     r.time,
     appointmentLocation: r.location,
-    images:            r.inspirationImages || [],
+    images:              r.inspirationImages || [],
   });
 
   const openDetail = (r) => {
@@ -135,7 +197,7 @@ const Dashboard = () => {
   const filtered = consultations.filter((r) => {
     const matchTab = activeTab === 'All' || r.appointmentType === activeTab;
     const q = search.toLowerCase();
-    const matchSearch = !q || r.fullName?.toLowerCase().includes(q) || r.date?.includes(q) || r._id?.toLowerCase().includes(q);
+    const matchSearch = !q || r.fullName?.toLowerCase().includes(q) || r.date?.includes(q) || r.id?.toLowerCase().includes(q);
     return matchTab && matchSearch;
   });
 
@@ -227,15 +289,12 @@ const Dashboard = () => {
             ) : (
               filtered.map((r, i) => (
                 <tr key={i} onClick={() => openDetail(r)} className="border-b border-[#F0EBE3] last:border-0 hover:bg-[#FDFAF5] transition-colors cursor-pointer">
-                  <td className="px-6 py-4 text-sm text-[#4A4035]">{r._id?.slice(-6).toUpperCase()}</td>
+                  <td className="px-6 py-4 text-sm text-[#4A4035]">{r.id?.slice(-6).toUpperCase()}</td>
                   <td className="px-6 py-4 text-sm text-[#4A4035]">{r.fullName}</td>
                   <td className="px-6 py-4 text-sm text-[#4A4035]">{r.appointmentType}</td>
                   <td className="px-6 py-4 text-sm text-[#4A4035]">
                     <div className="flex items-center gap-2">
-                      <span>{r.date?.split('T')[0]}</span>
-                      {r.date && new Date(r.date) < new Date(new Date().toDateString()) && (
-                        <span className="text-[10px] font-semibold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">Passed</span>
-                      )}
+                      <span>{r.date}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">

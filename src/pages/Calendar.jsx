@@ -32,7 +32,7 @@ export default function Calendar() {
   const blockedMap = {};
   blockDays.forEach((b) => {
     const key = b.date?.split('T')[0];
-    if (key) blockedMap[key] = b._id;
+    if (key) blockedMap[key] = b.id;
   });
 
   const consultMap = {};

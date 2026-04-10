@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export function usePayments() {
   const [payments, setPayments] = useState([]);
@@ -10,9 +10,9 @@ export function usePayments() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/payments`);
-      const data = await res.json();
-      setPayments(Array.isArray(data) ? data : []);
+      const q = query(collection(db, 'payments'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setPayments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -23,33 +23,20 @@ export function usePayments() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const create = async (body) => {
-    const res = await fetch(`${API}/payments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create');
-    setPayments((prev) => [data, ...prev]);
-    return data;
+    const ref = await addDoc(collection(db, 'payments'), { ...body, createdAt: serverTimestamp() });
+    const newDoc = { id: ref.id, ...body };
+    setPayments(prev => [newDoc, ...prev]);
+    return newDoc;
   };
 
   const update = async (id, body) => {
-    const res = await fetch(`${API}/payments/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update');
-    setPayments((prev) => prev.map((p) => (p._id === id ? data : p)));
-    return data;
+    await updateDoc(doc(db, 'payments', id), body);
+    setPayments(prev => prev.map(p => p.id === id ? { ...p, ...body } : p));
   };
 
   const remove = async (id) => {
-    const res = await fetch(`${API}/payments/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    setPayments((prev) => prev.filter((p) => p._id !== id));
+    await deleteDoc(doc(db, 'payments', id));
+    setPayments(prev => prev.filter(p => p.id !== id));
   };
 
   return { payments, loading, error, create, update, remove };

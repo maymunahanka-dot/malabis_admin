@@ -105,7 +105,7 @@ export default function Payments() {
   const handleEdit = async (form) => {
     setSaving(true);
     try {
-      await update(editing._id, { ...form, amount: Number(form.amount) });
+      await update(editing.id, { ...form, amount: Number(form.amount) });
       setEditing(null);
       setPanelOpen(false);
       toast('Payment updated');
@@ -222,7 +222,7 @@ export default function Payments() {
                 <td className="px-4 py-4">
                   <ActionMenu
                     onEdit={() => { setEditing(p); setPanelOpen(true); }}
-                    onDelete={() => handleDelete(p._id)}
+                    onDelete={() => handleDelete(p.id)}
                   />
                 </td>
               </tr>

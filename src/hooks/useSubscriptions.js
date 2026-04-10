@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API = import.meta.env.VITE_API_URL;
+import { db } from '../lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState([]);
@@ -10,10 +10,9 @@ export function useSubscriptions() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/subscriptions`);
-      const data = await res.json();
-      const sorted = Array.isArray(data) ? [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
-      setSubscriptions(sorted);
+      const q = query(collection(db, 'subscriptions'), orderBy('date', 'desc'));
+      const snap = await getDocs(q);
+      setSubscriptions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -24,33 +23,20 @@ export function useSubscriptions() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const create = async (body) => {
-    const res = await fetch(`${API}/subscriptions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create');
-    setSubscriptions((prev) => [data, ...prev]);
-    return data;
+    const ref = await addDoc(collection(db, 'subscriptions'), { ...body, date: serverTimestamp() });
+    const newDoc = { id: ref.id, ...body };
+    setSubscriptions(prev => [newDoc, ...prev]);
+    return newDoc;
   };
 
   const update = async (id, body) => {
-    const res = await fetch(`${API}/subscriptions/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update');
-    setSubscriptions((prev) => prev.map((s) => (s._id === id ? data : s)));
-    return data;
+    await updateDoc(doc(db, 'subscriptions', id), body);
+    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...body } : s));
   };
 
   const remove = async (id) => {
-    const res = await fetch(`${API}/subscriptions/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    setSubscriptions((prev) => prev.filter((s) => s._id !== id));
+    await deleteDoc(doc(db, 'subscriptions', id));
+    setSubscriptions(prev => prev.filter(s => s.id !== id));
   };
 
   return { subscriptions, loading, error, create, update, remove };
