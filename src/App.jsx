@@ -12,6 +12,10 @@ import Subscriptions from './pages/Subscriptions';
 import BridalPortfolio from './pages/BridalPortfolio';
 import Messages from './pages/Messages';
 import Login from './pages/Login';
+import ConsultationPackages from './pages/ConsultationPackages';
+import GalleryPage from './pages/Gallery';
+import TestimonialsPage from './pages/Testimonials';
+import Other from './pages/Other';
 
 function App() {
   return (
@@ -36,6 +40,10 @@ function App() {
               <Route path="subscriptions" element={<Subscriptions />} />
               <Route path="bridal-portfolio" element={<BridalPortfolio />} />
               <Route path="messages" element={<Messages />} />
+              <Route path="consultation-packages" element={<ConsultationPackages />} />
+              <Route path="gallery" element={<GalleryPage />} />
+              <Route path="testimonials" element={<TestimonialsPage />} />
+              <Route path="other" element={<Other />} />
             </Route>
           </Routes>
         </Router>

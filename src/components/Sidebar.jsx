@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Calendar, CreditCard, Users, BarChart3, LogOut, BookMarked, ImageIcon, MessageSquare } from 'lucide-react';
+import { LayoutGrid, Calendar, CreditCard, Users, BarChart3, LogOut, BookMarked, ImageIcon, MessageSquare, Package, MoreHorizontal, Images, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -19,6 +19,10 @@ const Sidebar = () => {
     { path: '/subscriptions', label: 'Subscriptions', icon: BookMarked },
     { path: '/bridal-portfolio', label: 'Bridal Portfolio', icon: ImageIcon },
     { path: '/messages', label: 'Messages', icon: MessageSquare },
+    { path: '/consultation-packages', label: 'Packages', icon: Package },
+    { path: '/gallery', label: 'Gallery', icon: Images },
+    { path: '/testimonials', label: 'Testimonials', icon: Star },
+    { path: '/other', label: 'Other', icon: MoreHorizontal },
   ];
 
   return (
