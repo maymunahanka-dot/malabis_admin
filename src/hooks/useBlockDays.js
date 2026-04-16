@@ -22,9 +22,9 @@ export function useBlockDays() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const block = async (date) => {
-    const ref = await addDoc(collection(db, 'blockdays'), { date });
-    const newDoc = { id: ref.id, date };
+  const block = async (date, { location = 'all', appointmentWith = 'all', type = 'all' } = {}) => {
+    const ref = await addDoc(collection(db, 'blockdays'), { date, location, appointmentWith, type });
+    const newDoc = { id: ref.id, date, location, appointmentWith, type };
     setBlockDays(prev => [...prev, newDoc]);
     return newDoc;
   };

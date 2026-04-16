@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ban, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useBlockDays } from '../hooks/useBlockDays';
 import { useConsultations } from '../hooks/useConsultations';
 import { useToast } from '../context/ToastContext';
@@ -16,6 +16,8 @@ export default function Calendar() {
   const [month, setMonth] = useState(today.getMonth());
   const [blockMode, setBlockMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [blockModal, setBlockModal] = useState(null); // { dateKey }
+  const [blockForm, setBlockForm] = useState({ location: 'all', appointmentWith: 'all', type: 'all' });
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
     return d.getDate() - d.getDay();
@@ -73,20 +75,30 @@ export default function Calendar() {
 
   const toggleBlock = async (dateKey) => {
     if (!blockMode) return;
-    setSaving(true);
-    try {
-      if (blockedMap[dateKey]) {
+    if (blockedMap[dateKey]) {
+      // unblock directly
+      setSaving(true);
+      try {
         await unblock(blockedMap[dateKey]);
         toast('Day unblocked', 'info');
-      } else {
-        await block(dateKey);
-        toast('Day blocked');
-      }
-    } catch (err) {
-      toast(err.message, 'error');
-    } finally {
-      setSaving(false);
+      } catch (err) { toast(err.message, 'error'); }
+      finally { setSaving(false); }
+    } else {
+      // open modal to choose options
+      setBlockForm({ location: 'all', appointmentWith: 'all', type: 'all' });
+      setBlockModal({ dateKey });
     }
+  };
+
+  const confirmBlock = async () => {
+    if (!blockModal) return;
+    setSaving(true);
+    try {
+      await block(blockModal.dateKey, blockForm);
+      toast('Day blocked');
+      setBlockModal(null);
+    } catch (err) { toast(err.message, 'error'); }
+    finally { setSaving(false); }
   };
 
   const isToday = (d) =>
@@ -218,7 +230,9 @@ export default function Calendar() {
                       </span>
                       <div className="mt-1 flex flex-col gap-0.5">
                         {isB && (
-                          <span className="text-[10px] font-medium bg-[#6B7280] text-white px-1.5 py-0.5 rounded">Blocked</span>
+                          <span className="text-[10px] font-medium bg-[#6B7280] text-white px-1.5 py-0.5 rounded">
+                            Blocked{blockDays.find(b => b.id === blockedMap[key])?.location !== 'all' ? ` · ${blockDays.find(b => b.id === blockedMap[key])?.location}` : ''}
+                          </span>
                         )}
                         {appts.slice(0, 2).map((a, idx) => (
                           <span key={idx} className="text-[10px] font-medium bg-[#FEF3C7] text-[#92400E] px-1.5 py-0.5 rounded truncate">
@@ -318,6 +332,59 @@ export default function Calendar() {
           </div>
         );
       })()}
+
+      {/* Block Modal */}
+      {blockModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[#2C1F0E]">Block {blockModal.dateKey}</h3>
+              <button onClick={() => setBlockModal(null)}><X size={18} className="text-[#8B7355]" /></button>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[#6B5E4E] uppercase tracking-wide">Location</label>
+              <select value={blockForm.location} onChange={e => setBlockForm(p => ({ ...p, location: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E0D8] bg-[#FDFAF5] text-sm text-[#2C1F0E] focus:outline-none focus:border-[#B8860B]">
+                <option value="all">All Locations</option>
+                <option value="MalaabisbyMaymz Abuja Branch">Abuja</option>
+                <option value="MalaabisbyMaymz Kano Branch">Kano</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[#6B5E4E] uppercase tracking-wide">Appointment With</label>
+              <select value={blockForm.appointmentWith} onChange={e => setBlockForm(p => ({ ...p, appointmentWith: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E0D8] bg-[#FDFAF5] text-sm text-[#2C1F0E] focus:outline-none focus:border-[#B8860B]">
+                <option value="all">All</option>
+                <option value="team">Design Team Only</option>
+                <option value="maimuna">Maimuna Anka</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[#6B5E4E] uppercase tracking-wide">Appointment Type</label>
+              <select value={blockForm.type} onChange={e => setBlockForm(p => ({ ...p, type: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E0D8] bg-[#FDFAF5] text-sm text-[#2C1F0E] focus:outline-none focus:border-[#B8860B]">
+                <option value="all">All Types</option>
+                <option value="physical">Physical</option>
+                <option value="virtual">Virtual</option>
+              </select>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button onClick={confirmBlock} disabled={saving}
+                className="flex-1 py-2.5 bg-[#6B7280] text-white rounded-lg text-sm font-semibold hover:bg-[#5A6268] disabled:opacity-60 flex items-center justify-center gap-2">
+                {saving && <Spinner size={16} />} Block Day
+              </button>
+              <button onClick={() => setBlockModal(null)}
+                className="flex-1 py-2.5 border border-[#E5E0D8] text-[#8B7355] rounded-lg text-sm font-medium hover:bg-[#F5F0E8]">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
