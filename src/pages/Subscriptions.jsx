@@ -150,7 +150,7 @@ export default function Subscriptions() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-[#E5E0D8] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E5E0D8] overflow-visible">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#E5E0D8] bg-[#FAF8F5]">

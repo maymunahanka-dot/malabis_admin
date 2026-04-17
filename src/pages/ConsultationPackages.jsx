@@ -36,6 +36,13 @@ export default function ConsultationPackages() {
     }));
   };
 
+  const setFree = (optIdx, value) => {
+    setEditing(prev => ({
+      ...prev,
+      options: prev.options.map((o, i) => i === optIdx ? { ...o, isFree: value, fee: value ? 0 : o.fee } : o),
+    }));
+  };
+
   if (loading) return <div className="flex items-center justify-center h-96"><Spinner size={36} /></div>;
   if (error)   return <div className="p-8 text-red-500 text-sm">Failed to load packages: {error}</div>;
 
@@ -58,7 +65,10 @@ export default function ConsultationPackages() {
               {(pkg.options || []).map((opt, i) => (
                 <div key={i} className="flex items-center justify-between text-sm">
                   <span className="text-[#6B5E4E]">{opt.label}</span>
-                  <span className="font-semibold text-[#B8860B]">₦{Number(opt.fee).toLocaleString()}</span>
+                  {opt.isFree
+                    ? <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Free</span>
+                    : <span className="font-semibold text-[#B8860B]">₦{Number(opt.fee).toLocaleString()}</span>
+                  }
                 </div>
               ))}
             </div>
@@ -82,17 +92,19 @@ export default function ConsultationPackages() {
             </h3>
             <div className="flex flex-col gap-4">
               {editing.options.map((opt, i) => (
-                <div key={i} className="flex flex-col gap-1">
+                <div key={i} className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-[#6B5E4E] uppercase tracking-wide">{opt.label}</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-[#A09080]">₦</span>
-                    <input
-                      type="number"
-                      value={opt.fee}
-                      onChange={e => setFee(i, e.target.value)}
-                      className="flex-1 px-3 py-2 rounded-lg border border-[#E5E0D8] bg-[#FDFAF5] text-sm text-[#2C1F0E] focus:outline-none focus:border-[#B8860B]"
-                    />
-                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={opt.isFree || false} onChange={e => setFree(i, e.target.checked)} />
+                    <span className="text-xs text-[#6B5E4E]">Free (no payment required)</span>
+                  </label>
+                  {!opt.isFree && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[#A09080]">₦</span>
+                      <input type="number" value={opt.fee} onChange={e => setFee(i, e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-[#E5E0D8] bg-[#FDFAF5] text-sm text-[#2C1F0E] focus:outline-none focus:border-[#B8860B]" />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

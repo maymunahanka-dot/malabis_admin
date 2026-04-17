@@ -197,7 +197,7 @@ export default function Payments() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm overflow-visible">
         <table className="w-full">
           <thead>
             <tr className="text-left border-b border-[#EDEAE4]">
