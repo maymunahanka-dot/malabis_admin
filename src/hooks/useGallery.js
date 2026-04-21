@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import { uploadToCloudinary } from '../lib/uploadToCloudinary';
+import {
+  collection, getDocs, addDoc, updateDoc, deleteDoc,
+  doc, serverTimestamp, query, orderBy,
+} from 'firebase/firestore';
 
 export function useGallery() {
   const [items, setItems] = useState([]);
@@ -22,22 +24,20 @@ export function useGallery() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const create = async ({ imageFile, description, height, order }) => {
-    const image = await uploadToCloudinary(imageFile);
+  const create = async ({ url, order }) => {
     const ref = await addDoc(collection(db, 'gallery'), {
-      image, description, height: height || '400px',
+      url,
       order: Number(order) || 0,
       createdAt: serverTimestamp(),
     });
-    const newDoc = { id: ref.id, image, description, height, order };
+    const newDoc = { id: ref.id, url, order: Number(order) || 0 };
     setItems(prev => [...prev, newDoc].sort((a, b) => a.order - b.order));
     return newDoc;
   };
 
-  const update = async (id, { imageFile, imagePreview, description, height, order }) => {
-    const image = imageFile ? await uploadToCloudinary(imageFile) : imagePreview;
-    await updateDoc(doc(db, 'gallery', id), { image, description, height, order: Number(order) || 0 });
-    setItems(prev => prev.map(i => i.id === id ? { ...i, image, description, height, order } : i));
+  const update = async (id, { url, order }) => {
+    await updateDoc(doc(db, 'gallery', id), { url, order: Number(order) || 0 });
+    setItems(prev => prev.map(i => i.id === id ? { ...i, url, order: Number(order) || 0 } : i));
   };
 
   const remove = async (id) => {
