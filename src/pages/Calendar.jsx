@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ban, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, X, Clock, MapPin, User, Video, Calendar as CalIcon } from 'lucide-react';
 import { useBlockDays } from '../hooks/useBlockDays';
 import { useConsultations } from '../hooks/useConsultations';
 import { useToast } from '../context/ToastContext';
@@ -18,6 +18,8 @@ export default function Calendar() {
   const [saving, setSaving] = useState(false);
   const [blockModal, setBlockModal] = useState(null); // { dateKey }
   const [blockForm, setBlockForm] = useState({ location: 'all', appointmentWith: 'all', type: 'all' });
+  const [selectedAppt, setSelectedAppt] = useState(null);
+  const [moreDayAppts, setMoreDayAppts] = useState(null); // array of appts for a day
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
     return d.getDate() - d.getDay();
@@ -39,7 +41,17 @@ export default function Calendar() {
 
   const consultMap = {};
   consultations.forEach((c) => {
-    const key = c.date?.split('T')[0];
+    let key = null;
+    if (c.date) {
+      // Handle "July 29, 2026" style strings and ISO strings alike
+      const parsed = new Date(c.date);
+      if (!isNaN(parsed)) {
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        key = `${y}-${m}-${d}`;
+      }
+    }
     if (key) {
       if (!consultMap[key]) consultMap[key] = [];
       consultMap[key].push(c);
@@ -235,12 +247,21 @@ export default function Calendar() {
                           </span>
                         )}
                         {appts.slice(0, 2).map((a, idx) => (
-                          <span key={idx} className="text-[10px] font-medium bg-[#FEF3C7] text-[#92400E] px-1.5 py-0.5 rounded truncate">
+                          <span
+                            key={idx}
+                            onClick={e => { e.stopPropagation(); setSelectedAppt(a); }}
+                            className="text-[10px] font-medium bg-[#FEF3C7] text-[#92400E] px-1.5 py-0.5 rounded truncate cursor-pointer hover:bg-[#FDE68A] transition-colors"
+                          >
                             {a.fullName}
                           </span>
                         ))}
                         {appts.length > 2 && (
-                          <span className="text-[10px] text-[#B8860B]">+{appts.length - 2} more</span>
+                          <span
+                            onClick={e => { e.stopPropagation(); setMoreDayAppts(appts); }}
+                            className="text-[10px] text-[#B8860B] cursor-pointer hover:underline"
+                          >
+                            +{appts.length - 2} more
+                          </span>
                         )}
                       </div>
                     </>
@@ -281,7 +302,11 @@ export default function Calendar() {
                   {isB && <span className="text-[10px] font-medium bg-[#6B7280] text-white px-1.5 py-0.5 rounded">Blocked</span>}
                   <div className="mt-2 flex flex-col gap-1">
                     {appts.map((a, idx) => (
-                      <div key={idx} className="text-[10px] bg-[#FEF3C7] text-[#92400E] px-1.5 py-1 rounded">
+                      <div
+                        key={idx}
+                        onClick={e => { e.stopPropagation(); setSelectedAppt(a); }}
+                        className="text-[10px] bg-[#FEF3C7] text-[#92400E] px-1.5 py-1 rounded cursor-pointer hover:bg-[#FDE68A] transition-colors"
+                      >
                         <p className="font-semibold truncate">{a.fullName}</p>
                         <p className="truncate opacity-80">{a.appointmentType}</p>
                       </div>
@@ -309,7 +334,11 @@ export default function Calendar() {
               {appts.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   {appts.map((a, i) => (
-                    <div key={i} className="border border-[#E5E0D8] rounded-lg p-4 bg-[#FDFAF5]">
+                    <div
+                      key={i}
+                      onClick={() => setSelectedAppt(a)}
+                      className="border border-[#E5E0D8] rounded-lg p-4 bg-[#FDFAF5] cursor-pointer hover:border-[#B8860B] transition-colors"
+                    >
                       <p className="font-semibold text-[#2C1F0E]">{a.fullName}</p>
                       <p className="text-sm text-[#8B7355]">{a.appointmentType}</p>
                       {a.time && <p className="text-xs text-[#A09080] mt-1">{a.time}</p>}
@@ -332,6 +361,91 @@ export default function Calendar() {
           </div>
         );
       })()}
+
+      {/* Appointment Detail Panel */}
+      {selectedAppt && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* backdrop */}
+          <div className="flex-1 bg-black/40" onClick={() => setSelectedAppt(null)} />
+          {/* panel */}
+          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col overflow-y-auto">
+            {/* header */}
+            <div className="bg-[#B8860B] px-6 py-5 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-1">Appointment</p>
+                <h2 className="text-white text-lg font-semibold leading-tight">{selectedAppt.fullName}</h2>
+              </div>
+              <button onClick={() => setSelectedAppt(null)} className="mt-1 text-white/80 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* details */}
+            <div className="flex flex-col gap-0 divide-y divide-[#F0EBE3]">
+              {[
+                { icon: <CalIcon size={15} />, label: 'Type', value: selectedAppt.appointmentType },
+                { icon: <User size={15} />, label: 'With', value: selectedAppt.appointmentWith },
+                { icon: <MapPin size={15} />, label: 'Location', value: selectedAppt.location },
+                { icon: <Clock size={15} />, label: 'Time', value: selectedAppt.time },
+                { icon: <CalIcon size={15} />, label: 'Date', value: selectedAppt.date },
+                { icon: <Video size={15} />, label: 'Meeting Link', value: selectedAppt.meetingLink || selectedAppt.zoomLink || selectedAppt.googleMeetLink },
+              ]
+                .filter(row => row.value)
+                .map((row, i) => (
+                  <div key={i} className="flex items-start gap-3 px-6 py-4">
+                    <span className="text-[#B8860B] mt-0.5 shrink-0">{row.icon}</span>
+                    <div>
+                      <p className="text-[10px] font-semibold text-[#A09080] uppercase tracking-wide">{row.label}</p>
+                      <p className="text-sm text-[#2C1F0E] mt-0.5">{row.value}</p>
+                    </div>
+                  </div>
+                ))
+              }
+
+              {selectedAppt.email && (
+                <div className="flex items-start gap-3 px-6 py-4">
+                  <span className="text-[#B8860B] mt-0.5 shrink-0 text-xs font-bold">@</span>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#A09080] uppercase tracking-wide">Email</p>
+                    <p className="text-sm text-[#2C1F0E] mt-0.5">{selectedAppt.email}</p>
+                  </div>
+                </div>
+              )}
+              {selectedAppt.additionalInfo && (
+                <div className="flex items-start gap-3 px-6 py-4">
+                  <span className="text-[#B8860B] mt-0.5 shrink-0 text-sm">✦</span>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#A09080] uppercase tracking-wide">Notes</p>
+                    <p className="text-sm text-[#2C1F0E] mt-0.5">{selectedAppt.additionalInfo}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* More Appointments Modal */}
+      {moreDayAppts && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-base font-semibold text-[#2C1F0E]">All Appointments</h3>
+              <button onClick={() => setMoreDayAppts(null)}><X size={18} className="text-[#8B7355]" /></button>
+            </div>
+            {moreDayAppts.map((a, i) => (
+              <button
+                key={i}
+                onClick={() => { setMoreDayAppts(null); setSelectedAppt(a); }}
+                className="w-full text-left bg-[#FEF3C7] hover:bg-[#FDE68A] transition-colors rounded-lg px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-[#92400E]">{a.fullName}</p>
+                <p className="text-xs text-[#92400E]/70 mt-0.5">{a.appointmentType}{a.time ? ` · ${a.time}` : ''}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Block Modal */}
       {blockModal && (

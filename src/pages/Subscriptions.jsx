@@ -15,16 +15,24 @@ const lbl = (label, children) => (
 
 const blank = { name: '', email: '', date: '' };
 
+const toDateStr = (val) => {
+  if (!val) return '';
+  const d = val?.toDate ? val.toDate() : new Date(val);
+  if (isNaN(d)) return '';
+  return d.toISOString().split('T')[0]; // YYYY-MM-DD for date input
+};
+
 function SubscriptionForm({ initial, onSubmit, saving }) {
-  const [form, setForm] = useState(initial || blank);
-  useEffect(() => setForm(initial || blank), [initial]);
+  const normalize = (src) => src ? { ...src, date: toDateStr(src.date) } : blank;
+  const [form, setForm] = useState(normalize(initial));
+  useEffect(() => setForm(normalize(initial)), [initial]);
   const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="flex flex-col gap-5">
       {lbl('Name', <input className={inputCls} value={form.name} onChange={set('name')} required placeholder="Full name" />)}
       {lbl('Email', <input type="email" className={inputCls} value={form.email} onChange={set('email')} required placeholder="email@example.com" />)}
-      {lbl('Date', <input type="date" className={inputCls} value={form.date?.split('T')[0] || ''} onChange={set('date')} />)}
+      {lbl('Date', <input type="date" className={inputCls} value={form.date || ''} onChange={set('date')} />)}
       <button type="submit" disabled={saving}
         className="w-full py-3 mt-2 bg-[#B8860B] text-white rounded-lg text-sm font-semibold hover:bg-[#9A7209] transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
         {saving && <Spinner size={16} />} Save
@@ -168,7 +176,11 @@ export default function Subscriptions() {
                 <td className="px-5 py-3 font-medium text-[#111827]">{s.name}</td>
                 <td className="px-5 py-3 text-[#4b5563]">{s.email}</td>
                 <td className="px-5 py-3 text-[#4b5563]">
-                  {s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                  {(() => {
+                    const raw = s.createdAt || s.date;
+                    const d = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null;
+                    return d && !isNaN(d) ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+                  })()}
                 </td>
                 <td className="px-4 py-3">
                   <ActionMenu
