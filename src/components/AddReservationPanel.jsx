@@ -5,7 +5,7 @@ import { UploadCloud, X } from 'lucide-react';
 const initialState = {
   name: '', email: '', phone: '', nextOfKin: '', nextOfKinPhone: '',
   appointmentType: '', appointmentWith: '', appointmentLocation: '',
-  appointmentDate: '', appointmentTime: '', appointmentAM: 'AM',
+  // appointmentDate: '', appointmentTime: '', appointmentAM: 'AM',
   consultationFee: '', paymentStatus: '', paymentGateway: '',
   additionalInfo: '', fabricPreference: '', trainLength: '',
   sleevePreference: '', silhouettePreference: '',
