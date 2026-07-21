@@ -36,8 +36,15 @@ const Dashboard = () => {
     { label: 'Total Bookings', sublabel: 'This week', value: consultations.length, icon: BookMarked },
     { label: 'Pending Approvals', sublabel: 'This week', value: consultations.filter(r => r.paymentStatus === 'Pending').length, icon: Clock3 },
     { label: "Today's Appointment", sublabel: 'Today', value: consultations.filter(r => r.date === new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })).length, icon: CalendarCheck2 },
-    { label: 'Total Revenue', sublabel: 'All time', value: `₦${consultations.filter(r => r.paymentStatus === 'Paid').reduce((sum, r) => sum + (r.consultationFee || 0), 0).toLocaleString()}`, icon: TrendingUp },
-  ];
+{
+  label: 'Total Revenue',
+  sublabel: 'All time',
+  value: `₦${consultations
+    .filter(r => r.paymentStatus === 'Paid')
+    .reduce((sum, r) => sum + Number(r.consultationFee || 0), 0)
+    .toLocaleString()}`,
+  icon: TrendingUp
+}  ];
 
   const buildFormData = (data) => {
     const formData = new FormData();
