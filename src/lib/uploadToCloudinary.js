@@ -2,6 +2,8 @@ const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || dojxfvsaw
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default'
 const FOLDER        = import.meta.env.VITE_CLOUDINARY_UPLOAD_FOLDER || 'img'
 
+console.log('rrrrrrrrrr',CLOUD_NAME, UPLOAD_PRESET, FOLDER);
+
 export async function uploadToCloudinary(file) {
   const fd = new FormData()
   fd.append('file', file)
