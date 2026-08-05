@@ -205,7 +205,8 @@ function ImageDropField({ preview, onChange, onClear }) {
 
   const handleFile = (file) => {
     if (!file || !file.type.startsWith('image/')) return;
-    onChange(file, URL.createObjectURL(file));
+    const copy = new File([file], file.name, { type: file.type });
+    onChange(copy, URL.createObjectURL(copy));
   };
 
   return (
